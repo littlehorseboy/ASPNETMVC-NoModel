@@ -1,0 +1,270 @@
+﻿
+@{
+    ViewBag.Title = "CRUD";
+}
+
+<div class="row">
+    <h3>CRUD</h3>
+    <hr />
+
+    <h4>新增一筆</h4>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="form-group">
+                <label for="newNameInput">姓名</label>
+                <input id="newNameInput" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="newCityInput">城市</label>
+                <input id="newCityInput" class="form-control" />
+            </div>
+            <button id="newDataBtn" class="btn btn-default">新增</button>
+        </div>
+    </div>
+    <hr />
+
+    <h4>自訂篩選</h4>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="form-group">
+                <label for="searchCitySelect">城市</label>
+                <select id="searchCitySelect" class="form-control">
+                    <option value="all">全部</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <hr />
+
+    <table id="datatables" class="table table-hover">
+        <thead>
+            <tr>
+                <th>功能</th>
+                <th>姓名</th>
+                <th>城市</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <hr />
+
+    <h4>編輯一筆</h4>
+    <div class="panel panel-default">
+        <div id="updatePanel" class="panel-body">
+
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script src="http://wzrd.in/standalone/uuid@latest"></script>
+    <script>
+        var searchCitySelect = document.querySelector('#searchCitySelect');
+        var newNameInput = document.querySelector('#newNameInput');
+        var newCityInput = document.querySelector('#newCityInput');
+        var newDataBtn = document.querySelector('#newDataBtn');
+        var updatePanel = document.querySelector('#updatePanel');
+
+        var t = $('#datatables').DataTable({
+            columns: [
+                { data: null },
+                { data: 'name' },
+                { data: 'city' },
+            ],
+            columnDefs: [{
+                targets: 0,
+                defaultContent: '<button class="btn btn-default">編輯</button><button class="btn btn-default">刪除</button>'
+            }],
+            oLanguage: {
+                sProcessing: '處理中...',
+                sLengthMenu: '顯示 _MENU_ 筆結果',
+                sZeroRecords: '沒有符合的資料!',
+                sInfo: '顯示第 _START_ 至 _END_ 筆結果，共 _TOTAL_ 筆',
+                sInfoEmpty: '顯示第 0 至 0 筆結果，共 0 筆',
+                sInfoFiltered: '(從 _MAX_ 筆結果過濾)',
+                sSearch: '搜索:',
+                oPaginate: {
+                    sFirst: '首頁',
+                    sPrevious: '上頁',
+                    sNext: '下頁',
+                    sLast: '尾頁'
+                }
+            }
+        });
+
+        // columnDefs 編輯按鈕事件
+        $('#datatables tbody').on('click', 'button:nth-child(1)', function (e) {
+            e.stopPropagation();
+            var thisRow = t.row($(this).parents('tr'));
+            var data = thisRow.data();
+
+            updatePanel.innerHTML = '';
+
+            var inputId = document.createElement('input');
+            inputId.className = 'hidden';
+            inputId.value = data.id;
+            updatePanel.appendChild(inputId);
+
+            var div = document.createElement('div');
+            div.className = 'form-group';
+            var label = document.createElement('label');
+            label.textContent = '姓名';
+            var inputName = document.createElement('input');
+            inputName.className = 'form-control';
+            inputName.value = data.name;
+            div.appendChild(label).appendChild(inputName);
+            updatePanel.appendChild(div);
+
+            var div = document.createElement('div');
+            div.className = 'form-group';
+            var label = document.createElement('label');
+            label.textContent = '城市';
+            var inputCity = document.createElement('input');
+            inputCity.className = 'form-control';
+            inputCity.value = data.city;
+            div.appendChild(label).appendChild(inputCity);
+            updatePanel.appendChild(div);
+
+            // 編輯一筆
+            var btn = document.createElement('button');
+            btn.className = 'btn btn-default';
+            btn.textContent = '編輯';
+            btn.addEventListener('click', function (e) {
+                var data = thisRow.data();
+
+                if (!inputName.value || !inputCity.value) {
+                    alert('請填寫完整');
+                    return false;
+                }
+
+                if (inputName.value !== data.name || inputCity.value !== data.city) {
+                    $.ajax({
+                        url: "@Url.Action("UpdateData", "CRUD")",
+                        data: JSON.stringify({ id: inputId.value, name: inputName.value, city: inputCity.value }),
+                        type: 'POST',
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: "html",
+                        success: function (response) {
+                            if (response == "Fail") {
+                                alert('編輯失敗');
+                                return false;
+                            } else {
+                                var array = [];
+                                array.push({ id: inputId.value, name: inputName.value, city: inputCity.value });
+                                thisRow.data({ id: inputId.value, name: inputName.value, city: inputCity.value }).draw(); // 只吃陣列
+                            }
+                        },
+                        error: function (xhr) {
+                            alert('編輯失敗');
+                        },
+                    });
+                } else {
+                    alert('資料無異動');
+                }
+            });
+            updatePanel.appendChild(btn);
+        });
+
+        // columnDefs 刪除按鈕事件
+        $('#datatables tbody').on('click', 'button:nth-child(2)', function (e) {
+            e.stopPropagation();
+            var thisRow = t.row($(this).parents('tr'));
+            var data = thisRow.data();
+            $.ajax({
+                url: "@Url.Action("DeleteData", "CRUD")",
+                data: JSON.stringify({ id: data.id }),
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                datatype: 'html',
+                success: function (response) {
+                    if (response == "Fail") {
+                        alert('刪除失敗');
+                        return false;
+                    } else {
+                        thisRow.remove().draw();
+                    }
+                },
+                error: function (xhr) {
+                    console.error('資料取得不正確');
+                },
+            });
+        });
+
+        // datatables.js
+        function getData() {
+            $.ajax({
+                url: "@Url.Action("GetData", "CRUD")",
+                data: JSON.stringify({ city: searchCitySelect.value }),
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                datatype: 'json',
+                success: function (response) {
+                    var result = JSON.parse(response);
+                    t.clear();
+                    t.rows.add(result).draw();
+                },
+                error: function (xhr) {
+                    console.error('資料取得不正確');
+                },
+            });
+        }
+
+        getData();
+
+        // CitySelect option add
+        $.ajax({
+            url: "@Url.Action("GetCitySelect", "CRUD")",
+            type: 'POST',
+            contentType: 'application/json; charset=utf-8',
+            datatype: 'json',
+            success: function (response) {
+                var result = JSON.parse(response);
+                result.forEach(function (obj) {
+                    var option = document.createElement('option');
+                    option.value = obj.city;
+                    option.textContent = obj.city;
+                    searchCitySelect.appendChild(option);
+                });
+            },
+            error: function (xhr) {
+                console.error('資料取得不正確');
+            },
+        });
+
+        // 自訂篩選 事件
+        searchCitySelect.addEventListener('change', function (e) {
+            getData();
+        });
+
+        // 新增一筆
+        newDataBtn.addEventListener('click', function (e) {
+            if (!newNameInput.value || !newCityInput.value) {
+                alert('請填寫完整');
+                return false;
+            }
+
+            var id = uuid.v1();
+
+            $.ajax({
+                url: "@Url.Action("InsertData", "CRUD")",
+                data: JSON.stringify({ id: id, name: newNameInput.value, city: newCityInput.value }),
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                dataType: "html",
+                success: function (response) {
+                    if (response == "Fail") {
+                        alert('新增失敗');
+                        return false;
+                    } else {
+                        var array = [];
+                        array.push({ id: id, name: newNameInput.value, city: newCityInput.value });
+                        t.rows.add(array).draw(); // 只吃陣列
+                    }
+                },
+                error: function (xhr) {
+                    alert('新增失敗');
+                },
+            });
+        });
+    </script>
+}
