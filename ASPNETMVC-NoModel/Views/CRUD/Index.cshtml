@@ -152,6 +152,8 @@
                                 var array = [];
                                 array.push({ id: inputId.value, name: inputName.value, city: inputCity.value });
                                 thisRow.data({ id: inputId.value, name: inputName.value, city: inputCity.value }).draw(); // 只吃陣列
+
+                                getCitySelect();
                             }
                         },
                         error: function (xhr) {
@@ -182,6 +184,8 @@
                         return false;
                     } else {
                         thisRow.remove().draw();
+
+                        getCitySelect();
                     }
                 },
                 error: function (xhr) {
@@ -212,24 +216,29 @@
         getData();
 
         // CitySelect option add
-        $.ajax({
-            url: "@Url.Action("GetCitySelect", "CRUD")",
-            type: 'POST',
-            contentType: 'application/json; charset=utf-8',
-            datatype: 'json',
-            success: function (response) {
-                var result = JSON.parse(response);
-                result.forEach(function (obj) {
-                    var option = document.createElement('option');
-                    option.value = obj.city;
-                    option.textContent = obj.city;
-                    searchCitySelect.appendChild(option);
-                });
-            },
-            error: function (xhr) {
-                console.error('資料取得不正確');
-            },
-        });
+        function getCitySelect() {
+            $.ajax({
+                url: "@Url.Action("GetCitySelect", "CRUD")",
+                type: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                datatype: 'json',
+                success: function (response) {
+                    var result = JSON.parse(response);
+                    searchCitySelect.innerHTML = '';
+                    result.forEach(function (obj) {
+                        var option = document.createElement('option');
+                        option.value = obj.city;
+                        option.textContent = obj.city;
+                        searchCitySelect.appendChild(option);
+                    });
+                },
+                error: function (xhr) {
+                    console.error('資料取得不正確');
+                },
+            });
+        }
+
+        getCitySelect();
 
         // 自訂篩選 事件
         searchCitySelect.addEventListener('change', function (e) {
@@ -259,6 +268,8 @@
                         var array = [];
                         array.push({ id: id, name: newNameInput.value, city: newCityInput.value });
                         t.rows.add(array).draw(); // 只吃陣列
+
+                        getCitySelect();
                     }
                 },
                 error: function (xhr) {
